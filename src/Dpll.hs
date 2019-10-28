@@ -37,26 +37,22 @@ runDpll :: Cnf -> Maybe Ctx
 runDpll cnf = dpll cnf Map.empty
 
 dpll :: Cnf -> Ctx -> Maybe Ctx
-dpll cnf ctx = 
-    let oneLiteralDisjoints = Set.filter (\d -> (Set.size d) == 1) cnf 
-        setOfUnits = Set.foldl' (\acc dis -> Set.union acc dis) Set.empty oneLiteralDisjoints 
-    in if Set.null cnf
-       then Just ctx 
-       else if isContainsEmptyDisjoint setOfUnits
-            then Nothing
-            else let (cnf1, ctx1) = Set.foldl' unitPropagate (cnf, ctx) setOfUnits 
-                     (cnf2, ctx2) = Set.foldl' unitPropagate (cnf1, ctx1) (getPureLiterals cnf1)
-                     cnf3 = Set.filter (not . Set.null) cnf2
-                 in if Set.null cnf3
-                    then Just ctx2
-                    else let
-                            -- take "first" literal in "first" disjoint
-                            newLiteral = head $ Set.toList $ head $ Set.toList cnf3
-                            newToCnf = Set.insert (Set.singleton newLiteral) cnf3 
-                            -- ctx2 will be updated during unit propagation at next iteration
-                            tryNewLiteral = dpll newToCnf ctx2
-                            negNewToCnf = Set.insert (Set.singleton (getNegated newLiteral)) cnf3
-                        in if tryNewLiteral /= Nothing
-                           then tryNewLiteral
-                           else dpll negNewToCnf ctx2
-                            
+dpll cnf ctx
+    | Set.null cnf                       = Just ctx
+    | isContainsEmptyDisjoint setOfUnits = Nothing
+    | otherwise =
+        let (cnf1, ctx1) = Set.foldl' unitPropagate (cnf, ctx) setOfUnits
+            (cnf2, ctx2) = Set.foldl' unitPropagate (cnf1, ctx1) (getPureLiterals cnf1)
+            ctx3 = Set.filter (not . Set.null) cnf2
+        in if Set.null ctx3
+           then Just ctx2
+           else let newLiteral = head $ Set.toList $ head $ Set.toList ctx3
+                    -- prepare ctx2 to different options
+                    newToCnf = Set.insert (Set.singleton newLiteral) ctx3
+                    negNewToCnf = Set.insert (Set.singleton (getNegated newLiteral)) ctx3
+                in case dpll newToCnf ctx2 of
+                        Just model -> Just model
+                        Nothing    -> dpll negNewToCnf ctx2
+    where
+        oneLiteralDisjoints = Set.filter (\d -> (Set.size d) == 1) cnf
+        setOfUnits = Set.foldl' Set.union Set.empty oneLiteralDisjoints
