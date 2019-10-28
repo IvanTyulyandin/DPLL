@@ -4,6 +4,7 @@ import Formula
 import Tseitin
 import Dpll
 import Debug.Trace
+import Criterion.Main
 
 genEdgeColorPropVar :: Int -> Int -> Int -> Formula
 genEdgeColorPropVar i j c = 
@@ -48,4 +49,7 @@ increaseNodesUntilUnsat nodes colors =
                     else undefined
 
 main :: IO ()
-main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
+main = defaultMain [
+    bgroup "fully connected graph with " 
+    [bench "3 colors" $ whnf (runDpll . cnfTseitin . genCliqueTest 12) 3]]
+

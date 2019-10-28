@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - unordered-containers
 - hashable
+- criterion
 
 library:
   source-dirs: src
