@@ -33,7 +33,7 @@ instance Show Literal where
     show (NegVar x) = '!' : x
 
 type LiteralSet = HashSet Literal
-type Cnf = HashSet LiteralSet
+type Cnf = [LiteralSet]
 type NameGenHelper = Int
 
 getNewVar :: NameGenHelper -> Formula

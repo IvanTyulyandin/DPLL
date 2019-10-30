@@ -7,7 +7,7 @@ cnfTseitin :: Formula -> Cnf
 cnfTseitin f = cnf
     where 
         (last, bindings, _) = cnfHelper f [] 1
-        cnf = foldl (\set disjoint -> Set.insert (getAllLiterals disjoint) set) Set.empty (last : bindings)
+        cnf = foldl (\acc disjoint -> (getAllLiterals disjoint) : acc) [] (last : bindings)
     
         cnfHelper :: Formula -> [Formula] -> NameGenHelper -> (Formula, [Formula], NameGenHelper)
         cnfHelper (Var x) ds num = (Var x, ds, num)
@@ -22,8 +22,8 @@ cnfTseitin f = cnf
                             in (newName : ls, newDs, newNumGen)
                           ) ([l1], ds1, num1) fs
                 p = getNewVar num'
-                lastDisj = Or $ p : Prelude.map (\name -> Not name) innerMapping
-                resDs = lastDisj : (Prelude.map (\name -> Or [(Not p), name]) innerMapping ++ ds')
+                oneOfDisj = Or $ p : Prelude.map (\name -> Not name) innerMapping
+                resDs = oneOfDisj : (Prelude.map (\name -> Or [(Not p), name]) innerMapping ++ ds')
         cnfHelper (Or (f:fs)) ds num = (p, resDs, num' + 1)
             where 
                 (l1, ds1, num1) = cnfHelper f ds num
@@ -33,5 +33,5 @@ cnfTseitin f = cnf
                             in (newName : ls, newDs, newNumGen)
                           ) ([l1], ds1, num1) fs
                 p = getNewVar num'
-                lastDisj = Or $ Not p : innerMapping
-                resDs = lastDisj : (Prelude.map (\name -> Or [p, Not name]) innerMapping ++ ds')
+                oneOfDisj = Or $ Not p : innerMapping
+                resDs = oneOfDisj : (Prelude.map (\name -> Or [p, Not name]) innerMapping ++ ds')

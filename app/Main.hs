@@ -50,8 +50,8 @@ increaseNodesUntilUnsat nodes colors =
                     else undefined
 
 main :: IO ()
-main = defaultMain [
-    bgroup "fully connected graph with " 
-    [bench "3 colors, 12 nodes" $ whnf (runDpll . cnfTseitin . genCliqueTest 12) 3]]
--- main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
--- main = putStrLn $ show $ Set.size $ cnfTseitin $ genCliqueTest 11 3
+-- main = defaultMain [
+--     bgroup "fully connected graph with " 
+--     [bench "3 colors, 12 nodes" $ whnf (runDpll . cnfTseitin . genCliqueTest 12) 3]]
+main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
+-- main = putStrLn $ show $ length $ cnfTseitin $ genCliqueTest 11 3
