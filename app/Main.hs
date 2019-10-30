@@ -13,20 +13,20 @@ genEdgeColorPropVar i j c =
 
 triangleOneColorInvariant :: Int -> Int -> Int -> Int -> Formula
 triangleOneColorInvariant i j k c =
-    Not (And (genEdgeColorPropVar i j c)
-             (And (genEdgeColorPropVar j k c)
-                  (genEdgeColorPropVar i k c)))
+    Not (And [(genEdgeColorPropVar i j c),
+              (genEdgeColorPropVar j k c),
+              (genEdgeColorPropVar i k c)])
 
 allTrianglesOneColored :: Int -> Int -> Formula
 allTrianglesOneColored nodes colors =
-    foldl1 Or [triangleOneColorInvariant i j k c 
-            | i <- [1..nodes-2], j <- [i+1..nodes-1], k <- [j+1..nodes], c <- [1..colors]]
+    Or [triangleOneColorInvariant i j k c 
+        | i <- [1..nodes-2], j <- [i+1..nodes-1], k <- [j+1..nodes], c <- [1..colors]]
 
 onlyOneColorEdge :: Int -> Int -> Int -> Int -> Formula
 onlyOneColorEdge i j colors usedColor =
     let colored = genEdgeColorPropVar i j usedColor
         notColored = [Not $ genEdgeColorPropVar i j c | c <- [1..colors], c /= usedColor]
-    in foldl1 And $ colored : notColored
+    in And $ colored : notColored
 
 allEdgesColored :: Int -> Int -> Formula
 allEdgesColored nodes colors =
@@ -34,10 +34,10 @@ allEdgesColored nodes colors =
             | i <- [1..nodes-1] 
             , j <- [i+1..nodes]
             , usedColor <- [1..colors]]
-    in foldl1 Or onlyOneColored
+    in Or onlyOneColored
 
 genCliqueTest :: Int -> Int -> Formula
-genCliqueTest nodes colors = And (allTrianglesOneColored nodes colors) (allEdgesColored nodes colors)
+genCliqueTest nodes colors = And [(allTrianglesOneColored nodes colors), (allEdgesColored nodes colors)]
 
 increaseNodesUntilUnsat :: Int -> Int -> Int 
 increaseNodesUntilUnsat nodes colors = 
@@ -45,7 +45,7 @@ increaseNodesUntilUnsat nodes colors =
         res = runDpll $ cnfTseitin testFormula
     in case res of
         Nothing -> nodes - 1
-        Just ctx -> if eval testFormula ctx
+        Just ctx -> if eval ctx testFormula
                     then trace ("SAT " ++ show nodes) $ increaseNodesUntilUnsat (nodes + 1) colors
                     else undefined
 

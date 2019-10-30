@@ -9,22 +9,22 @@ import GHC.Generics (Generic)
 data Formula 
     = Var String
     | Not Formula
-    | And Formula Formula
-    | Or Formula Formula deriving (Eq)
+    | And [Formula]
+    | Or [Formula] deriving (Eq)
 
 instance Show Formula where
-    show (Var x) = x
-    show (Not x) = "!(" ++ show x ++ ")"
-    show (And e1 e2) = "(" ++ show e1  ++ " & " ++ show e2 ++ ")"
-    show (Or e1 e2) = "(" ++ show e1  ++ " | " ++ show e2 ++ ")"
+    show (Var x)  = x
+    show (Not f)  = "!(" ++ show f ++ ")"
+    show (And fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " & " ++ (show f)) "" fs) ++ ")"
+    show (Or fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " | " ++ (show f)) "" fs) ++ ")"
 
 type Ctx = HashMap String Bool    
 
-eval :: Formula -> Ctx -> Bool
-eval (Var x) ctx     = lookupDefault False x ctx
-eval (Not e) ctx     = not $ eval e ctx
-eval (And e1 e2) ctx = eval e1 ctx && eval e2 ctx
-eval (Or e1 e2) ctx  = eval e1 ctx || eval e2 ctx
+eval :: Ctx -> Formula -> Bool
+eval ctx (Var x)  = lookupDefault False x ctx
+eval ctx (Not f)  = not $ eval ctx f
+eval ctx (And fs) = all (eval ctx) fs
+eval ctx (Or fs)  = any (eval ctx) fs
 
 data Literal = PosVar String | NegVar String deriving (Eq, Generic)
 instance Hashable Literal
@@ -45,8 +45,8 @@ getAllLiterals (Not x) =
     case x of
         Var y -> Set.singleton (NegVar y)
         _ -> getAllLiterals x
-getAllLiterals (And e1 e2) = Set.union (getAllLiterals e1) (getAllLiterals e2)
-getAllLiterals (Or e1 e2) = Set.union (getAllLiterals e1) (getAllLiterals e2)
+getAllLiterals (And fs) = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
+getAllLiterals (Or fs)  = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
 
 safelyAddNot :: Formula -> Formula
 safelyAddNot (Not (Not x)) = safelyAddNot x
