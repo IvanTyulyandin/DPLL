@@ -47,12 +47,11 @@ dpll cnf ctx
         in if Prelude.null cnf3
            then Just ctx2
            else let newLiteral = head $ Set.toList $ head cnf3
-                    -- prepare ctx2 to different options
                     newToCnf = (Set.singleton newLiteral) : cnf3
                     negNewToCnf = (Set.singleton (getNegated newLiteral)) : cnf3
                 in case dpll newToCnf ctx2 of
                         Just model -> Just model
                         Nothing    -> dpll negNewToCnf ctx2
     where
-        oneLiteralDisjoints = Prelude.filter (\d -> (Set.size d) == 1) cnf
+        oneLiteralDisjoints = Prelude.filter ((==) 1 . Set.size) cnf
         setOfUnits = Prelude.foldl Set.union Set.empty oneLiteralDisjoints

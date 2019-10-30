@@ -5,30 +5,35 @@ import Tseitin
 import Dpll
 import Debug.Trace
 import Criterion.Main
-import Data.HashSet as Set
 
-genEdgeColorPropVar :: Int -> Int -> Int -> Formula
+type Node = Int
+type Color = Int
+type NumOfNodes = Int
+type NumOfColors = Int
+
+genEdgeColorPropVar :: Node -> Node -> Color -> Formula
 genEdgeColorPropVar i j c = 
     Var $ show i ++ "_" ++ show j ++ "_" ++ show c
 
-triangleOneColorInvariant :: Int -> Int -> Int -> Int -> Formula
+triangleOneColorInvariant :: Node -> Node -> Node -> Color -> Formula
 triangleOneColorInvariant i j k c =
     Not (And [(genEdgeColorPropVar i j c),
               (genEdgeColorPropVar j k c),
               (genEdgeColorPropVar i k c)])
 
-allTrianglesOneColored :: Int -> Int -> Formula
+allTrianglesOneColored :: NumOfNodes -> NumOfColors -> Formula
 allTrianglesOneColored nodes colors =
     Or [triangleOneColorInvariant i j k c 
         | i <- [1..nodes-2], j <- [i+1..nodes-1], k <- [j+1..nodes], c <- [1..colors]]
 
-onlyOneColorEdge :: Int -> Int -> Int -> Int -> Formula
+onlyOneColorEdge :: Node -> Node -> NumOfColors -> Color -> Formula
 onlyOneColorEdge i j colors usedColor =
-    let colored = genEdgeColorPropVar i j usedColor
-        notColored = [Not $ genEdgeColorPropVar i j c | c <- [1..colors], c /= usedColor]
-    in And $ colored : notColored
+    let coloredWithUsedColor = genEdgeColorPropVar i j usedColor
+        notColoredWithAnotherColors = [Not $ genEdgeColorPropVar i j c
+                | c <- [1..colors], c /= usedColor]
+    in And $ coloredWithUsedColor : notColoredWithAnotherColors
 
-allEdgesColored :: Int -> Int -> Formula
+allEdgesColored :: NumOfNodes -> NumOfColors -> Formula
 allEdgesColored nodes colors =
     let onlyOneColored = [onlyOneColorEdge i j colors usedColor 
             | i <- [1..nodes-1] 
@@ -36,10 +41,10 @@ allEdgesColored nodes colors =
             , usedColor <- [1..colors]]
     in Or onlyOneColored
 
-genCliqueTest :: Int -> Int -> Formula
+genCliqueTest :: NumOfNodes -> NumOfColors -> Formula
 genCliqueTest nodes colors = And [(allTrianglesOneColored nodes colors), (allEdgesColored nodes colors)]
 
-increaseNodesUntilUnsat :: Int -> Int -> Int 
+increaseNodesUntilUnsat :: NumOfNodes -> NumOfColors -> NumOfNodes
 increaseNodesUntilUnsat nodes colors = 
     let testFormula = genCliqueTest nodes colors
         res = runDpll $ cnfTseitin testFormula
