@@ -1,45 +1,47 @@
 module Dpll where
 
 import Formula
+import Data.Hashable
 import Data.HashMap.Strict as Map
 import Data.HashSet as Set
 
-isContainsEmptyDisjoint :: LiteralSet -> Bool
-isContainsEmptyDisjoint literalSet = result
+containsEmptyClause :: NameRepr a => LiteralSet a -> Bool
+containsEmptyClause literalSet = result
     where
-        (result, _) = Set.foldl' emptyDisjointChecker (False, Set.empty) literalSet
+        (result, _) = Set.foldl' emptyClauseChecker (False, Set.empty) literalSet
 
-        emptyDisjointChecker :: (Bool, LiteralSet) -> Literal -> (Bool, LiteralSet)
-        emptyDisjointChecker (curRes, acc) literal = 
-            if not curRes
+        emptyClauseChecker :: NameRepr a =>
+            (Bool, LiteralSet a) -> Literal a -> (Bool, LiteralSet a)
+        emptyClauseChecker (metEmpty, acc) literal =
+            if not metEmpty
             then (Set.member (getNegated literal) acc, Set.insert literal acc)
-            else (curRes, Set.empty)
+            else (metEmpty, Set.empty)
 
-unitPropagate :: (Cnf, Ctx) -> Literal -> (Cnf, Ctx)
-unitPropagate (cnf, ctx) l = 
-    let withoutTrueDisjoints = Prelude.filter (not . Set.member l) cnf
-        newCnf = Prelude.map (Set.filter (/= getNegated l)) withoutTrueDisjoints
+unitPropagate :: NameRepr a => (Cnf a, Ctx a) -> Literal a -> (Cnf a, Ctx a)
+unitPropagate (cnf, ctx) l =
+    let withoutTrueClauses = Prelude.filter (not . Set.member l) cnf
+        newCnf = Prelude.map (Set.filter (/= getNegated l)) withoutTrueClauses
     in case l of
-           PosVar x -> (newCnf, Map.insert x True ctx) 
-           NegVar x -> (newCnf, Map.insert x False ctx) 
+           PosVar x -> (newCnf, Map.insert x True ctx)
+           NegVar x -> (newCnf, Map.insert x False ctx)
 
-getPureLiterals :: Cnf -> LiteralSet
-getPureLiterals cnf = pure
+getPureLiterals :: NameRepr a => Cnf a -> LiteralSet a
+getPureLiterals cnf = pureLiterals
     where
         allLiterals = Prelude.foldl Set.union Set.empty cnf
-        pure = Set.foldl' 
+        pureLiterals = Set.foldl'
             (\acc l ->  if Set.member (getNegated l) acc
                         then Set.delete l $ Set.delete (getNegated l) acc
                         else acc) 
             allLiterals allLiterals
 
-runDpll :: Cnf -> Maybe Ctx
+runDpll :: NameRepr a => Cnf a -> Maybe (Ctx a)
 runDpll cnf = dpll cnf Map.empty
 
-dpll :: Cnf -> Ctx -> Maybe Ctx
+dpll :: NameRepr a => Cnf a -> Ctx a -> Maybe (Ctx a)
 dpll cnf ctx
-    | Prelude.null cnf                   = Just ctx
-    | isContainsEmptyDisjoint setOfUnits = Nothing
+    | Prelude.null cnf               = Just ctx
+    | containsEmptyClause setOfUnits = Nothing
     | otherwise =
         let (cnf1, ctx1) = Set.foldl' unitPropagate (cnf, ctx) setOfUnits
             (cnf2, ctx2) = Set.foldl' unitPropagate (cnf1, ctx1) (getPureLiterals cnf1)
@@ -53,5 +55,5 @@ dpll cnf ctx
                         Just model -> Just model
                         Nothing    -> dpll negNewToCnf ctx2
     where
-        oneLiteralDisjoints = Prelude.filter ((==) 1 . Set.size) cnf
-        setOfUnits = Prelude.foldl Set.union Set.empty oneLiteralDisjoints
+        oneLiteralClauses = Prelude.filter ((==) 1 . Set.size) cnf
+        setOfUnits = Prelude.foldl Set.union Set.empty oneLiteralClauses

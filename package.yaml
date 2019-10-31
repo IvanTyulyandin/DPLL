@@ -28,6 +28,7 @@ dependencies:
 ghc-options:
     - -O3
     - -optc-march=native
+    - -Wall
 
 library:
   source-dirs: src

@@ -1,45 +1,63 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE InstanceSigs #-}
 module Formula where
 
 import Data.HashMap.Strict as Map
 import Data.HashSet as Set
 import Data.Hashable
-import GHC.Generics (Generic)
 
-data Formula 
-    = Var String
-    | Not Formula
-    | And [Formula]
-    | Or [Formula] deriving (Eq)
+type Node = Int
+type Color = Int
+type NumOfNodes = Int
+type NumOfColors = Int
 
-instance Show Formula where
-    show (Var x)  = x
+class (Eq a, Hashable a, Enum a, Show a) => NameRepr a where
+    makeRepr :: Node -> Node -> Color -> a
+
+instance NameRepr Int where
+    makeRepr i j c = 100000 * i + 1000 * j + c
+
+data Formula a
+    = Var a
+    | Not (Formula a)
+    | And [(Formula a)]
+    | Or [(Formula a)] deriving (Eq)
+
+instance (Show a) => Show (Formula a) where
+    show (Var x)  = show x
     show (Not f)  = "!(" ++ show f ++ ")"
     show (And fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " & " ++ (show f)) "" fs) ++ ")"
     show (Or fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " | " ++ (show f)) "" fs) ++ ")"
 
-type Ctx = HashMap String Bool    
+type Ctx a = HashMap a Bool
 
-eval :: Ctx -> Formula -> Bool
+eval :: (NameRepr a) => Ctx a -> Formula a -> Bool
 eval ctx (Var x)  = lookupDefault False x ctx
 eval ctx (Not f)  = not $ eval ctx f
 eval ctx (And fs) = all (eval ctx) fs
 eval ctx (Or fs)  = any (eval ctx) fs
 
-data Literal = PosVar String | NegVar String deriving (Eq, Generic)
-instance Hashable Literal
-instance Show Literal where
-    show (PosVar x) = x
-    show (NegVar x) = '!' : x
+data Literal a = PosVar a | NegVar a deriving (Eq)
+instance (Hashable a) => Hashable (Literal a) where
+    hash :: (Hashable a) => Literal a -> Int
+    hash (PosVar x) = hash x
+    hash (NegVar x) = hash $ hash x
 
-type LiteralSet = HashSet Literal
-type Cnf = [LiteralSet]
-type NameGenHelper = Int
+    hashWithSalt :: (Hashable a) => Int -> Literal a -> Int
+    hashWithSalt salt (PosVar x) = hashWithSalt salt x
+    hashWithSalt salt (NegVar x) = -1 * hashWithSalt salt x
 
-getNewVar :: NameGenHelper -> Formula
-getNewVar x = Var $ 'p' : show x
+instance (Show a) => Show (Literal a) where
+    show :: (Show a) => Literal a -> String
+    show (PosVar x) = show x
+    show (NegVar x) = '!' : show x
 
-getAllLiterals :: Formula -> HashSet Literal
+type LiteralSet a = HashSet (Literal a)
+type Cnf a = [LiteralSet a]
+
+getNewVar :: a -> Formula a
+getNewVar x = Var x
+
+getAllLiterals :: (Eq a, Hashable a) => Formula a -> HashSet (Literal a)
 getAllLiterals (Var x) = Set.singleton (PosVar x)
 getAllLiterals (Not x) = 
     case x of
@@ -48,12 +66,11 @@ getAllLiterals (Not x) =
 getAllLiterals (And fs) = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
 getAllLiterals (Or fs)  = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
 
-safelyAddNot :: Formula -> Formula
+safelyAddNot :: Formula a -> Formula a
 safelyAddNot (Not (Not x)) = safelyAddNot x
 safelyAddNot (Not x) = x
 safelyAddNot x = Not x
 
-getNegated :: Literal -> Literal
+getNegated :: Literal a -> Literal a
 getNegated (PosVar x) = NegVar x
 getNegated (NegVar x) = PosVar x
-

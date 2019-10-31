@@ -1,37 +1,42 @@
 module Tseitin where
 
 import Formula
-import Data.HashSet as Set
 
-cnfTseitin :: Formula -> Cnf
-cnfTseitin f = cnf
-    where 
-        (last, bindings, _) = cnfHelper f [] 1
-        cnf = foldl (\acc disjoint -> (getAllLiterals disjoint) : acc) [] (last : bindings)
-    
-        cnfHelper :: Formula -> [Formula] -> NameGenHelper -> (Formula, [Formula], NameGenHelper)
-        cnfHelper (Var x) ds num = (Var x, ds, num)
-        cnfHelper (Not x) ds num = (safelyAddNot l, ds', newNum)
-            where (l, ds', newNum) = cnfHelper x ds num
-        cnfHelper (And (f:fs)) ds num = (p, resDs, num' + 1)
+cnfTseitin :: (NameRepr a) => Formula a -> Cnf a
+cnfTseitin initF = cnf
+    where
+        (lastF, bindings, _) = cnfHelper initF [] (toEnum 0)
+        cnf = foldl (\acc disjoint -> (getAllLiterals disjoint) : acc) [] (lastF : bindings)
+
+        cnfHelper :: (NameRepr a) => Formula a -> [Formula a] -> a -> (Formula a, [Formula a], a)
+        -- bad input defence
+        cnfHelper (And []) _ _ = undefined
+        cnfHelper (Or []) _ _ = undefined
+        cnfHelper (And (_:[])) _ _ = undefined
+        cnfHelper (Or (_:[])) _ _ = undefined
+        -- good input processing
+        cnfHelper (Var x) cs num = (Var x, cs, num)
+        cnfHelper (Not x) cs num = (safelyAddNot l, cs', newNum)
+            where (l, cs', newNum) = cnfHelper x cs num
+        cnfHelper (And (f:fs)) cs num = (p, resCs, succ num')
             where 
-                (l1, ds1, num1) = cnfHelper f ds num
-                (innerMapping, ds', num') = 
-                    foldl (\(ls, disjs, numGen) frm -> 
-                            let (newName, newDs, newNumGen) = cnfHelper frm disjs numGen
-                            in (newName : ls, newDs, newNumGen)
-                          ) ([l1], ds1, num1) fs
+                (l1, cs1, num1) = cnfHelper f cs num
+                (innerMapping, cs', num') =
+                    foldl (\(ls, clauses, numGen) frm ->
+                            let (newName, newClauses, newNumGen) = cnfHelper frm clauses numGen
+                            in (newName : ls, newClauses, newNumGen)
+                          ) ([l1], cs1, num1) fs
                 p = getNewVar num'
-                oneOfDisj = Or $ p : Prelude.map (\name -> Not name) innerMapping
-                resDs = oneOfDisj : (Prelude.map (\name -> Or [(Not p), name]) innerMapping ++ ds')
-        cnfHelper (Or (f:fs)) ds num = (p, resDs, num' + 1)
+                oneOfClauses = Or $ p : Prelude.map (\name -> Not name) innerMapping
+                resCs = oneOfClauses : (Prelude.map (\name -> Or [(Not p), name]) innerMapping ++ cs')
+        cnfHelper (Or (f:fs)) cs num = (p, resCs, succ num')
             where 
-                (l1, ds1, num1) = cnfHelper f ds num
-                (innerMapping, ds', num') = 
-                    foldl (\(ls, disjs, numGen) frm -> 
-                            let (newName, newDs, newNumGen) = cnfHelper frm disjs numGen
-                            in (newName : ls, newDs, newNumGen)
-                          ) ([l1], ds1, num1) fs
+                (l1, cs1, num1) = cnfHelper f cs num
+                (innerMapping, cs', num') =
+                    foldl (\(ls, clauses, numGen) frm ->
+                            let (newName, newClauses, newNumGen) = cnfHelper frm clauses numGen
+                            in (newName : ls, newClauses, newNumGen)
+                          ) ([l1], cs1, num1) fs
                 p = getNewVar num'
-                oneOfDisj = Or $ Not p : innerMapping
-                resDs = oneOfDisj : (Prelude.map (\name -> Or [p, Not name]) innerMapping ++ ds')
+                oneOfClauses = Or $ Not p : innerMapping
+                resCs = oneOfClauses : (Prelude.map (\name -> Or [p, Not name]) innerMapping ++ cs')
