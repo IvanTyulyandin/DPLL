@@ -13,8 +13,11 @@ type NumOfColors = Int
 class (Eq a, Hashable a, Enum a, Show a) => NameRepr a where
     makeRepr :: Node -> Node -> Color -> a
 
-instance NameRepr Int where
-    makeRepr i j c = 100000 * i + 1000 * j + c
+instance (NameRepr Int) where
+    -- if big formula will be passed to cnfTseitin == gg
+    -- collisions will be possible
+    -- there is space for 1000 nodes graph and 1000 colors
+    makeRepr i j c = 1000000 * i + 1000 * j + c
 
 data Formula a
     = Var a
@@ -25,8 +28,12 @@ data Formula a
 instance (Show a) => Show (Formula a) where
     show (Var x)  = show x
     show (Not f)  = "!(" ++ show f ++ ")"
-    show (And fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " & " ++ (show f)) "" fs) ++ ")"
-    show (Or fs) = "(" ++ show (head fs) ++ (foldl (\acc f -> acc ++ " | " ++ (show f)) "" fs) ++ ")"
+    show (Or []) = error "Empty Or"
+    show (And []) = error "Empty And"
+    show (Or (_:[])) = error "Or should be binary, not unary"
+    show (And (_:[])) = error "And should be binary, not unary"
+    show (And (f:fs)) = "(" ++ show f ++ (foldl (\acc frm -> acc ++ " & " ++ (show frm)) "" fs) ++ ")"
+    show (Or (f:fs))  = "(" ++ show f ++ (foldl (\acc frm -> acc ++ " | " ++ (show frm)) "" fs) ++ ")"
 
 type Ctx a = HashMap a Bool
 
@@ -57,7 +64,7 @@ type Cnf a = [LiteralSet a]
 getNewVar :: a -> Formula a
 getNewVar x = Var x
 
-getAllLiterals :: (Eq a, Hashable a) => Formula a -> HashSet (Literal a)
+getAllLiterals :: (Eq a, Hashable a) => Formula a -> LiteralSet a
 getAllLiterals (Var x) = Set.singleton (PosVar x)
 getAllLiterals (Not x) = 
     case x of

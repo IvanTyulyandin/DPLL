@@ -29,13 +29,14 @@ onlyOneColorEdge i j colors usedColor =
                 | c <- [1..colors], c /= usedColor]
     in And $ coloredWithUsedColor : notColoredWithAnotherColors
 
+oneEdgeAllColors :: (NameRepr a) => Node -> Node -> NumOfColors -> Formula a
+oneEdgeAllColors i j colors =
+    Or [onlyOneColorEdge i j colors usedColor
+        | usedColor <- [1..colors]]
+
 allEdgesColored :: (NameRepr a) => NumOfNodes -> NumOfColors -> Formula a
 allEdgesColored nodes colors =
-    let onlyOneColored = [onlyOneColorEdge i j colors usedColor 
-            | i <- [1..nodes-1] 
-            , j <- [i+1..nodes]
-            , usedColor <- [1..colors]]
-    in Or onlyOneColored
+    And [oneEdgeAllColors i j colors | i <- [1..nodes-1], j <- [i+1..nodes]]
 
 genCliqueTest :: (NameRepr a) => NumOfNodes -> NumOfColors -> Formula a
 genCliqueTest nodes colors = And [(allTrianglesInvariant nodes colors), (allEdgesColored nodes colors)]
@@ -48,11 +49,16 @@ increaseNodesUntilUnsat nodes colors =
         Nothing -> nodes - 1
         Just ctx -> if eval ctx testFormula
                     then trace ("SAT " ++ show nodes) $ increaseNodesUntilUnsat (nodes + 1) colors
-                    else undefined
+                    else error "SAT, but eval gave false"
 
 main :: IO ()
 -- main = defaultMain [
 --     bgroup "fully connected graph with " 
 --     [bench "3 colors, 12 nodes" $ whnf (runDpll . cnfTseitin . (genCliqueTest 12 :: Int -> Formula Int)) 3]]
-main = putStrLn $ show $ increaseNodesUntilUnsat 3 2
--- main = putStrLn $ show $ length $ cnfTseitin ((genCliqueTest 13 3) :: Formula Int)
+main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
+-- main =
+--     let resCtx = runDpll $ cnfTseitin ((genCliqueTest 6 3) :: Formula Int)
+--     in case resCtx of
+--         Nothing -> print "Nothing"
+--         Just ctx -> print $ eval ctx ((genCliqueTest 6 3) :: Formula Int)
+-- main = print $ ((genCliqueTest 3 2) :: Formula Int)
