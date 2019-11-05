@@ -57,9 +57,11 @@ instance (Show a) => Show (Literal a) where
 type LiteralSet a = HashSet (Literal a)
 type Cnf a = [LiteralSet a]
 
+{-# SPECIALISE INLINE getNewVar :: Int -> Formula Int #-}
 getNewVar :: a -> Formula a
 getNewVar x = Var x
 
+{-# SPECIALISE INLINE getAllLiterals :: Formula Int -> LiteralSet Int #-}
 getAllLiterals :: (Eq a, Hashable a) => Formula a -> LiteralSet a
 getAllLiterals (Var x) = Set.singleton (PosVar x)
 getAllLiterals (Not x) = 
@@ -69,11 +71,13 @@ getAllLiterals (Not x) =
 getAllLiterals (And fs) = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
 getAllLiterals (Or fs)  = foldl (\acc f -> Set.union acc (getAllLiterals f)) Set.empty fs
 
+{-# SPECIALISE INLINE safelyAddNot :: Formula Int -> Formula Int #-}
 safelyAddNot :: Formula a -> Formula a
 safelyAddNot (Not (Not x)) = safelyAddNot x
 safelyAddNot (Not x) = x
 safelyAddNot x = Not x
 
+{-# SPECIALISE INLINE getNegated :: Literal Int -> Literal Int #-}
 getNegated :: Literal a -> Literal a
 getNegated (PosVar x) = NegVar x
 getNegated (NegVar x) = PosVar x

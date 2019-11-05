@@ -4,11 +4,13 @@ import Formula
 import Data.HashMap.Strict as Map
 import Data.HashSet as Set
 
+{-# SPECIALISE containsEmptyClause :: [Literal Int] -> Bool #-}
 containsEmptyClause :: (NameRepr a) => [Literal a] -> Bool
 containsEmptyClause literalSet = result
     where
         (result, _) = Prelude.foldl emptyClauseChecker (False, Set.empty) literalSet
-
+        {-# SPECIALISE emptyClauseChecker ::
+            (Bool, LiteralSet Int) -> Literal Int -> (Bool, LiteralSet Int) #-}
         emptyClauseChecker :: NameRepr a =>
             (Bool, LiteralSet a) -> Literal a -> (Bool, LiteralSet a)
         emptyClauseChecker (metEmpty, acc) literal =
@@ -16,6 +18,7 @@ containsEmptyClause literalSet = result
             then (Set.member (getNegated literal) acc, Set.insert literal acc)
             else (metEmpty, Set.empty)
 
+{-# SPECIALISE getPureLiterals :: Cnf Int -> [Literal Int] #-}
 getPureLiterals :: (NameRepr a) => Cnf a -> [Literal a]
 getPureLiterals cnf = Set.toList pureLiterals
     where
@@ -26,11 +29,13 @@ getPureLiterals cnf = Set.toList pureLiterals
                         else acc) 
             allLiterals allLiterals
 
+{-# SPECIALISE INLINE getUnits :: Cnf Int -> [Literal Int] #-}
 getUnits :: (NameRepr a) => Cnf a -> [Literal a]
 getUnits cnf =
     let oneLiteralSet = Prelude.filter ((==) 1 . Set.size) cnf
     in Prelude.foldl (\acc clause -> (Set.toList clause) ++ acc) [] oneLiteralSet
 
+{-# SPECIALISE INLINE getLiteralsToPropagate :: Cnf Int -> [Literal Int] #-}
 getLiteralsToPropagate :: (NameRepr a) => Cnf a -> [Literal a]
 getLiteralsToPropagate cnf =
     let units = getUnits cnf
@@ -38,6 +43,7 @@ getLiteralsToPropagate cnf =
 
 type DpllConf a = (Cnf a, Ctx a, [Literal a])
 
+{-# SPECIALISE INLINE propagateNext :: DpllConf Int -> DpllConf Int #-}
 propagateNext :: (NameRepr a) => DpllConf a -> DpllConf a
 propagateNext (_, _, []) = error "Nothing to propagate"
 propagateNext (cnf, ctx, l:ls) =
@@ -50,9 +56,11 @@ propagateNext (cnf, ctx, l:ls) =
         PosVar x -> (newCnf, Map.insert x True ctx, newToPropagate ++ ls)
         NegVar x -> (newCnf, Map.insert x False ctx, newToPropagate ++ ls)
 
+{-# SPECIALISE INLINE runDpll :: Cnf Int -> Maybe (Ctx Int) #-}
 runDpll :: (NameRepr a) => Cnf a -> Maybe (Ctx a)
 runDpll cnf = dpll (cnf, Map.empty, getLiteralsToPropagate cnf)
 
+{-# SPECIALISE INLINE dpll :: DpllConf Int -> Maybe (Ctx Int) #-}
 dpll :: (NameRepr a) => DpllConf a -> Maybe (Ctx a)
 dpll (cnf, ctx, []) =
     let cnf1 = Prelude.filter (not . Set.null) cnf

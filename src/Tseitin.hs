@@ -2,6 +2,7 @@ module Tseitin where
 
 import Formula
 
+{-# SPECIALISE cnfTseitin :: Formula Int -> Cnf Int #-}
 cnfTseitin :: (NameRepr a) => Formula a -> Cnf a
 cnfTseitin initF = cnf
     where
