@@ -45,10 +45,6 @@ eval ctx (Or fs)  = any (eval ctx) fs
 
 data Literal a = PosVar a | NegVar a deriving (Eq)
 instance (Hashable a) => Hashable (Literal a) where
-    hash :: (Hashable a) => Literal a -> Int
-    hash (PosVar x) = hash x
-    hash (NegVar x) = hash $ hash x
-
     hashWithSalt :: (Hashable a) => Int -> Literal a -> Int
     hashWithSalt salt (PosVar x) = hashWithSalt salt x
     hashWithSalt salt (NegVar x) = -1 * hashWithSalt salt x

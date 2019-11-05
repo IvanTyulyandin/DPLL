@@ -52,10 +52,10 @@ increaseNodesUntilUnsat nodes colors =
                     else error "SAT, but eval gave false"
 
 main :: IO ()
--- main = defaultMain [
---     bgroup "fully connected graph with " 
---     [bench "3 colors, 12 nodes" $ whnf (runDpll . cnfTseitin . (genCliqueTest 12 :: Int -> Formula Int)) 3]]
-main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
+main = defaultMain [
+    bgroup "fully connected graph with "
+    [bench "3 colors, 10 nodes" $ whnf (runDpll . cnfTseitin . (genCliqueTest 10 :: Int -> Formula Int)) 3]]
+-- main = putStrLn $ show $ increaseNodesUntilUnsat 3 3
 -- main =
 --     let resCtx = runDpll $ cnfTseitin ((genCliqueTest 6 3) :: Formula Int)
 --     in case resCtx of
