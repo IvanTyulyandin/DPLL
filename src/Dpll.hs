@@ -38,9 +38,9 @@ getUnits cnf =
 
 {-# SPECIALISE INLINE getLiteralsToPropagate :: Cnf Int -> [Literal Int] #-}
 getLiteralsToPropagate :: (NameRepr a) => Cnf a -> [Literal a]
-getLiteralsToPropagate cnf =
-    let units = getUnits cnf
-    in (Prelude.filter (\lit -> notElem lit units) $ getPureLiterals cnf) ++ units
+getLiteralsToPropagate = getUnits
+    -- let units = getUnits cnf
+    -- in (Prelude.filter (\lit -> notElem lit units) $ getPureLiterals cnf) ++ units
 
 type DpllConf a = (Cnf a, Ctx a, [Literal a])
 
