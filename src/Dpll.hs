@@ -3,12 +3,13 @@ module Dpll where
 import Formula
 import Data.HashMap.Strict as Map
 import Data.HashSet as Set
+import Data.List as List
 
 {-# SPECIALISE containsEmptyClause :: [Literal Int] -> Bool #-}
 containsEmptyClause :: (NameRepr a) => [Literal a] -> Bool
-containsEmptyClause literalSet = result
+containsEmptyClause literalList = result
     where
-        (result, _) = Prelude.foldl emptyClauseChecker (False, Set.empty) literalSet
+        (result, _) = List.foldl' emptyClauseChecker (False, Set.empty) literalList
         {-# SPECIALISE emptyClauseChecker ::
             (Bool, LiteralSet Int) -> Literal Int -> (Bool, LiteralSet Int) #-}
         emptyClauseChecker :: NameRepr a =>
@@ -22,18 +23,18 @@ containsEmptyClause literalSet = result
 getPureLiterals :: (NameRepr a) => Cnf a -> [Literal a]
 getPureLiterals cnf = Set.toList pureLiterals
     where
-        allLiterals = Prelude.foldl Set.union Set.empty cnf
+        allLiterals = List.foldl' Set.union Set.empty cnf
         pureLiterals = Set.foldl'
-            (\acc l ->  if Set.member (getNegated l) acc
-                        then Set.delete l $ Set.delete (getNegated l) acc
-                        else acc) 
+            (\acc l -> if Set.member (getNegated l) acc
+                       then Set.delete l $ Set.delete (getNegated l) acc
+                       else acc)
             allLiterals allLiterals
 
 {-# SPECIALISE INLINE getUnits :: Cnf Int -> [Literal Int] #-}
 getUnits :: (NameRepr a) => Cnf a -> [Literal a]
 getUnits cnf =
-    let oneLiteralSet = Prelude.filter ((==) 1 . Set.size) cnf
-    in Prelude.foldl (\acc clause -> (Set.toList clause) ++ acc) [] oneLiteralSet
+    let oneLiteralSet = List.filter ((==) 1 . Set.size) cnf
+    in List.foldl' (\acc clause -> (Set.toList clause) ++ acc) [] oneLiteralSet
 
 {-# SPECIALISE INLINE getLiteralsToPropagate :: Cnf Int -> [Literal Int] #-}
 getLiteralsToPropagate :: (NameRepr a) => Cnf a -> [Literal a]
