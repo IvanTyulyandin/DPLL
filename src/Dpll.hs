@@ -49,7 +49,7 @@ propagateNext :: (NameRepr a) => DpllConf a -> DpllConf a
 propagateNext (_, _, []) = error "Nothing to propagate"
 propagateNext (cnf, ctx, l:ls) =
     let withoutTrueClauses = Prelude.filter (not . Set.member l) cnf
-        newCnf = Prelude.map (Set.filter (/= getNegated l)) withoutTrueClauses
+        newCnf = Prelude.map (Set.delete (getNegated l)) withoutTrueClauses
         -- seems not optimal to find out newToPropagate
         -- since most of (getLiteralsToPropagate newCnf) already in ls
         newToPropagate = Prelude.filter (\lit -> notElem lit ls) $ getLiteralsToPropagate newCnf
